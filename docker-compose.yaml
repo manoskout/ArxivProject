@@ -50,7 +50,8 @@ x-airflow-common:
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     # WARNING: Use _PIP_ADDITIONAL_REQUIREMENTS option ONLY for a quick checks
     # for other purpose (development, test and especially production usage) build/extend Airflow image.
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+    # Since minio uses S3 API, we need to install the Amazon provider package to enable S3 support in Airflow.
+    _PIP_ADDITIONAL_REQUIREMENTS: 'apache-airflow-providers-amazon'
     # The following lines can be used to set a custom config file, stored in the local config folder
     AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
 
@@ -298,7 +299,7 @@ services:
       _AIRFLOW_WWW_USER_CREATE: 'true'
       _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
       _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
-      _PIP_ADDITIONAL_REQUIREMENTS: ''
+      _PIP_ADDITIONAL_REQUIREMENTS: 'apache-airflow-providers-amazon'
     user: "0:0"
 
   airflow-cli:
@@ -337,7 +338,23 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
-
+  # Minio integration as a S3 compatible object storage service for Airflow. 
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    environment:
+      - MINIO_ROOT_USER=minio
+      - MINIO_ROOT_PASSWORD=minio123
+    volumes:
+      - ./minio_data:/data
+    command: ["server", "--console-address", ":9001", "/data"]
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    restart: always
+    networks:
+      - data_pipeline_network
+      - airflow_backend
 
 networks:
   # Just for the airflow services to communicate with each other.
@@ -350,3 +367,4 @@ networks:
 
 volumes:
   postgres-db-volume:
+  minio_data:
