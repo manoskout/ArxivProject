@@ -48,22 +48,27 @@ def data_fetcher():
                     pdf_url = link.get('href')
             
             # authors list into a comma-separated string for easier database insertion
-            authors = ", ".join([author.text for author in entry.findall('atom:author/atom:name', namespaces)])
+            # authors = ", ".join([author.text for author in entry.findall('atom:author/atom:name', namespaces)])
+            # fix postgress issue with array type by returning a list instead of a string
+            authors = [author.text for author in entry.findall('atom:author/atom:name', namespaces)]
             
             cat_node = entry.find('arxiv:primary_category', namespaces)
             primary_cat = cat_node.get('term') if cat_node is not None else None
             
-            all_categories = ", ".join([node.get('term') for node in entry.findall('atom:category', namespaces)])
+            # all_categories = ", ".join([node.get('term') for node in entry.findall('atom:category', namespaces)])
+            # fix postgress issue with array type by returning a list instead of a string
+            all_categories = [node.get('term') for node in entry.findall('atom:category', namespaces)]
             
+
             all_papers.append({
                 "arxiv_id": arxiv_id,
                 "title": title,
                 "authors": authors,
                 "abstract": abstract,
-                "primary_cat": primary_cat,
+                "primary_category": primary_cat,
                 "all_categories": all_categories,
-                "group_name": group_name,
-                "link": pdf_url,
+                # "group_name": group_name,
+                "pdf_url": pdf_url,
                 "published_at": published_at,
                 "updated_at": updated_at
             })

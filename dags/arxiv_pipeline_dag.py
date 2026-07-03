@@ -12,31 +12,55 @@ Daily pipeline:
 """
 
 from __future__ import annotations
-
+from airflow import DAG
 import pendulum
 from airflow.decorators import dag, task
 from src.fetch_papers import data_fetcher
+from psycopg2.extras import execute_values
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from psycopg2.extras import execute_values   
 ARXIV_CATEGORIES = ["cs.LG", "cs.CL"]
 POSTGRES_CONN_ID = "papers_db"
 
 
-@dag(
-    dag_id="arxiv_paper_pipeline",
-    schedule="0 6 * * *",                      # daily, 06:00 UTC
-    start_date=pendulum.datetime(2026, 6, 1, tz="UTC"),
-    catchup=True,                              # enables backfilling history
+
+with DAG(
+    dag_id='arxiv_paper_pipeline',
+    start_date= pendulum.datetime(2026, 6, 1, tz="UTC"),
+    schedule='@daily',
+    catchup=True,
     max_active_runs=1,
     default_args={
-        "retries": 3,
-        "retry_delay": pendulum.duration(minutes=5),
-        "retry_exponential_backoff": True,
+        'retries': 3,
+        'retry_delay': pendulum.duration(minutes=5),
+        'retry_exponential_backoff': True,
     },
-    tags=["arxiv", "llm", "portfolio"],
-)
-def arxiv_paper_pipeline():
+    tags=['arxiv'],
+) as dag:
 
+    # create staging table for the day's papers
+    create_staging = SQLExecuteQueryOperator(
+        task_id="create_staging_table",
+        conn_id="papers_db",
+        sql="""
+            -- safely cleaning/dropping any existing staging table
+            DROP TABLE IF EXISTS staging_papers;
+            
+            -- creating a new staging table
+            CREATE TABLE staging_papers (
+                arxiv_id VARCHAR,
+                title TEXT,
+                authors TEXT[],        
+                abstract TEXT,
+                primary_category VARCHAR,
+                all_categories TEXT[], 
+                -- group_name VARCHAR,
+                pdf_url TEXT,
+                published_at TIMESTAMP,
+                updated_at TIMESTAMP
+            );
+        """
+    )
     @task
     def fetch_papers(data_interval_start=None, data_interval_end=None) -> list[dict]:
         """Query the arXiv API for papers in the run's date window.
@@ -55,22 +79,59 @@ def arxiv_paper_pipeline():
 
         # remove any entire row where the arxiv_id, title, or abstract is missing
         df = df.dropna(subset=['arxiv_id', 'title', 'abstract'])
-
         # keeps the first from multiple rows with the exact same ID
         df = df.drop_duplicates(subset=['arxiv_id'])
-
         # normalize strings (ArXiv abstracts often contain hard line-breaks \n formatting the text for web display)
         df['abstract'] = df['abstract'].str.replace(r'\s+', ' ', regex=True).str.strip()
         df['title'] = df['title'].str.replace(r'\s+', ' ', regex=True).str.strip()
+        ordered_columns = [
+            'arxiv_id', 'title', 'authors', 'abstract', 
+            'primary_category', 'all_categories', 'pdf_url',
+            'published_at', 'updated_at'
+        ]
+        df = df[ordered_columns]
+        # list of tuples for the Postgres insert hook
+        return [tuple(x) for x in df.to_numpy()]
+    
+    @task
+    def staging_insert(clean_papers: list):
+        
 
-        # Convert back to list of tuples for the Postgres insert hook
-        clean_papers = [tuple(x) for x in df.to_numpy()]
-        return clean_papers
+        # Connect to the Postgres database using the Airflow connection
+        hook = PostgresHook(postgres_conn_id="papers_db")
+        conn = hook.get_conn()
+        cursor = conn.cursor()
+
+        # Define the insert query
+        insert_query = """
+            INSERT INTO staging_papers (
+                arxiv_id,
+                title,
+                authors,        
+                abstract,
+                primary_category,
+                all_categories, 
+                -- group_name,
+                pdf_url,
+                published_at,
+                updated_at 
+            ) VALUES %s
+        """
+
+        # Use execute_values for efficient bulk insert
+        execute_values(cursor, insert_query, clean_papers)
+
+        # Commit the transaction and close the connection
+        conn.commit()
+        cursor.close()
+        conn.close()
     
 
     raw = fetch_papers()
     clean = clean_and_normalize(raw)
+    load_to_stage = staging_insert(clean)
+   
 
 
-
-arxiv_paper_pipeline()
+    create_staging >> raw >> clean >> load_to_stage  # Wait for staging table to be truncated before fetching
+    # Wait for cleaning before inserting into staging
