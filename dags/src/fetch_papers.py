@@ -46,7 +46,15 @@ def data_fetcher():
             
             all_categories = ", ".join([node.get('term') for node in entry.findall('atom:category', namespaces)])
             
-            all_papers.append((arxiv_id, title, authors, abstract, primary_cat, all_categories, group_name))
+            all_papers.append({
+                "arxiv_id": arxiv_id,
+                "title": title,
+                "authors": authors,
+                "abstract": abstract,
+                "primary_cat": primary_cat,
+                "all_categories": all_categories,
+                "group_name": group_name
+            })
         
         time.sleep(3) # arXiv rate limits
 
