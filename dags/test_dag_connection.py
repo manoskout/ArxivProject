@@ -17,14 +17,6 @@ def process_extracted_tables(ti):
 
 def verify_minio_connection():
     s3_hook = S3Hook(aws_conn_id='minio')
-    test_bucket = 'arxiv-raw-pdfs'
-    
-    if not s3_hook.check_for_bucket(test_bucket):
-        print(f"Bucket '{test_bucket}' not found. Creating it now...")
-        s3_hook.create_bucket(bucket_name=test_bucket)
-        print("Bucket created successfully!")
-    else:
-        print(f"Bucket '{test_bucket}' already exists.")
         
     client = s3_hook.get_conn()
     response = client.list_buckets()
