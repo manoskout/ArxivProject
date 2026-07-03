@@ -37,6 +37,15 @@ def data_fetcher():
             arxiv_id = entry.find('atom:id', namespaces).text.split('/')[-1]
             title = entry.find('atom:title', namespaces).text.strip()
             abstract = entry.find('atom:summary', namespaces).text.strip()
+            # Inside your extraction loop:
+            published_at = entry.find('atom:published', namespaces).text
+            updated_at = entry.find('atom:updated', namespaces).text
+
+            # Get the PDF URL
+            pdf_url = None
+            for link in entry.findall('atom:link', namespaces):
+                if link.get('title') == 'pdf':
+                    pdf_url = link.get('href')
             
             # authors list into a comma-separated string for easier database insertion
             authors = ", ".join([author.text for author in entry.findall('atom:author/atom:name', namespaces)])
@@ -53,7 +62,10 @@ def data_fetcher():
                 "abstract": abstract,
                 "primary_cat": primary_cat,
                 "all_categories": all_categories,
-                "group_name": group_name
+                "group_name": group_name,
+                "link": pdf_url,
+                "published_at": published_at,
+                "updated_at": updated_at
             })
         
         time.sleep(3) # arXiv rate limits
