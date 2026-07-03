@@ -7,3 +7,10 @@ Get paper information from Arxiv, then save to the database
 ### Prerequisites
 Airflow
 Postgres + vector
+
+
+## NOTE: Minio
+Since you are talking to MinIO, hence you use update on the airflow UI the connections and add on the json the endpoint URL
+`
+{"endpoint_url": "http://minio:9000}
+`
