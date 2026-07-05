@@ -16,9 +16,12 @@ from airflow import DAG
 import pendulum
 from airflow.decorators import dag, task
 from src.fetch_papers import data_fetcher
+from src.minio_functions import validate_bucket
 from psycopg2.extras import execute_values
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+import json
 ARXIV_CATEGORIES = ["cs.LG", "cs.CL"]
 POSTGRES_CONN_ID = "papers_db"
 
@@ -71,6 +74,35 @@ with DAG(
         """
         return data_fetcher()
 
+    
+
+
+    # Data Lake architecture (bronze/raw layer)
+    #   - save the raw data to MinIO 
+    #   - long-term storage 
+    #   - reproducibility
+
+    @task
+    def save_raw_to_minio(raw_papers: list, ds: str = None):
+        if not raw_papers:
+            print("No papers fetched; skipping MinIO save.")
+            return
+        
+        json_data = json.dumps(raw_papers, default=str)
+        s3_hook = S3Hook(aws_conn_id="minio") 
+        
+        bucket_name = "arxiv-papers"
+        object_key = f"raw_json/arxiv_papers_{ds}.json" 
+        validate_bucket(bucket_name, s3_hook)
+        
+        s3_hook.load_string(
+            string_data=json_data,
+            key=object_key,
+            bucket_name=bucket_name,
+            replace=True
+        )
+        print(f"Saved raw papers to MinIO at {bucket_name}/{object_key}")
+    
     @task
     def clean_and_normalize(raw_papers: list) -> list:
         import pandas as pd
@@ -93,6 +125,8 @@ with DAG(
         # list of tuples for the Postgres insert hook
         return [tuple(x) for x in df.to_numpy()]
     
+    
+
     @task
     def staging_insert(clean_papers: list):
         
@@ -128,6 +162,7 @@ with DAG(
     
 
     raw = fetch_papers()
+    save_raw_to_minio(raw)
     clean = clean_and_normalize(raw)
     load_to_stage = staging_insert(clean)
    
