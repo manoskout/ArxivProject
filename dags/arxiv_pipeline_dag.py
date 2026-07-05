@@ -22,9 +22,11 @@ from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 import json
+import pandas as pd
+
 ARXIV_CATEGORIES = ["cs.LG", "cs.CL"]
 POSTGRES_CONN_ID = "papers_db"
-
+BUCKET = "arxiv-papers"
 
 
 with DAG(
@@ -94,7 +96,7 @@ with DAG(
         bucket_name = "arxiv-papers"
         object_key = f"raw_json/arxiv_papers_{ds}.json" 
         validate_bucket(bucket_name, s3_hook)
-        
+
         s3_hook.load_string(
             string_data=json_data,
             key=object_key,
@@ -104,11 +106,22 @@ with DAG(
         print(f"Saved raw papers to MinIO at {bucket_name}/{object_key}")
     
     @task
-    def clean_and_normalize(raw_papers: list) -> list:
-        import pandas as pd
-        
-        df = pd.DataFrame(raw_papers)
+    def clean_and_normalize(ds: str = None) -> list:
+        bucket_name = BUCKET
+        object_key = f"raw_json/arxiv_papers_{ds}.json"
+        s3_hook = S3Hook(aws_conn_id="minio")
+        if not s3_hook.check_for_key(key=object_key, bucket_name=bucket_name):
+            print(f"No raw data found in MinIO at {bucket_name}/{object_key}; skipping cleaning.")
+            return []
+        print(f"Reading raw papers from MinIO at {bucket_name}/{object_key}")
+        raw_data = s3_hook.read_key(key=object_key, bucket_name=bucket_name)
+        raw_papers = json.loads(raw_data)
 
+        if not raw_papers:
+            print("No papers fetched; skipping cleaning.")
+            return []
+        
+        df= pd.DataFrame(raw_papers)
         # remove any entire row where the arxiv_id, title, or abstract is missing
         df = df.dropna(subset=['arxiv_id', 'title', 'abstract'])
         # keeps the first from multiple rows with the exact same ID
@@ -163,7 +176,7 @@ with DAG(
 
     raw = fetch_papers()
     save_raw_to_minio(raw)
-    clean = clean_and_normalize(raw)
+    clean = clean_and_normalize()
     load_to_stage = staging_insert(clean)
    
 
