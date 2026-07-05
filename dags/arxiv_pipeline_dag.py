@@ -53,7 +53,8 @@ with DAG(
             
             -- creating a new staging table
             CREATE TABLE staging_papers (
-                arxiv_id VARCHAR,
+                id BIGSERIAL PRIMARY KEY,
+                arxiv_id TEXT UNIQUE NOT NULL,
                 title TEXT,
                 authors TEXT[],        
                 abstract TEXT,
