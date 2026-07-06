@@ -1,3 +1,4 @@
+BEGIN;
 -- Insert papers
 insert into papers(
     arxiv_id, 
@@ -49,8 +50,6 @@ insert into paper_authors(paper_id, author_id, position)
 select 
     p.id, 
     a.id,
-    o.author,
-    p.arxiv_id, 
     o.ord 
 from staging_papers stage
 cross join lateral unnest(stage.authors) with ordinality as o(author, ord)
@@ -59,7 +58,7 @@ join authors a on a.name = o.author
 on conflict do nothing;
 
 -- SELECT * FROM paper_authors;
-select * from categories;
+-- select * from categories;
 -- Link Paper categories
 insert into paper_categories(paper_id, category_id, is_primary)
 select p.id, c.id, (c.code = sp.primary_category)
@@ -67,3 +66,5 @@ from staging_papers sp
 join papers p on p.arxiv_id = sp.arxiv_id
 join categories c on c.code = any(sp.all_categories)
 on conflict do nothing;
+
+COMMIT;

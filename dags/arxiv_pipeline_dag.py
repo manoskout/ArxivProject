@@ -67,6 +67,12 @@ with DAG(
             );
         """
     )
+    distribute_data = SQLExecuteQueryOperator(
+            task_id="distribute_data",
+            conn_id="papers_db",
+            sql= "src/scripts/data_distribution.sql"
+    )
+
     @task
     def fetch_papers(data_interval_start=None, data_interval_end=None) -> list[dict]:
         """Query the arXiv API for papers in the run's date window.
@@ -173,14 +179,19 @@ with DAG(
         conn.commit()
         cursor.close()
         conn.close()
+
     
+    # @task(trigger_rule="all_done")
+    # def log_pipeline_run():
+    #     # Log the run of the pipeline for monitoring and auditing purposes
+    #     pass
 
     raw = fetch_papers()
     save_raw_to_minio(raw)
     clean = clean_and_normalize()
-    load_to_stage = staging_insert(clean)
-   
+    load_to_stage = staging_insert(clean)   
+    # log_run = log_pipeline_run()
 
 
-    create_staging >> raw >> clean >> load_to_stage  # Wait for staging table to be truncated before fetching
-    # Wait for cleaning before inserting into staging
+    create_staging >> raw >> clean >> load_to_stage >> distribute_data # >> log_run
+  
