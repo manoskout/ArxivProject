@@ -12,7 +12,9 @@ CREATE TABLE papers (
     published_at    TIMESTAMPTZ NOT NULL,
     updated_at      TIMESTAMPTZ,
     pdf_url         TEXT,
+    pdf_object_path TEXT,                      -- MinIO object path for the PDF 
     ingested_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+
 );
 
 
