@@ -1,6 +1,5 @@
 """
 Research Paper Intelligence Pipeline.
-
 Daily pipeline:
     fetch_papers
     Validate 

@@ -25,6 +25,7 @@ from airflow.operators.python import ShortCircuitOperator
 import json
 import pandas as pd
 import requests
+import time
 
 def _has_papers(ti):
     papers = ti.xcom_pull(task_ids='get_papers_to_download')
@@ -76,6 +77,7 @@ with DAG(
         for paper in papers:
             arxiv_id, pdf_url = paper
             response = requests.get(pdf_url)
+            time.sleep(3)  
             if response.status_code == 200:
                 object_path = f"arxiv_pdfs/{arxiv_id}.pdf"
                 client.put_object(Bucket='arxiv-papers', Key=object_path, Body=response.content)
