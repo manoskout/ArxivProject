@@ -356,6 +356,35 @@ services:
       - data_pipeline_network
       - airflow_backend
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    volumes:
+      - ./ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ['CMD', 'ollama', 'list']
+      interval: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - data_pipeline_network
+
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ./ollama_models:/root/.ollama
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ['ollama', 'pull', 'gemma4:26b']
+    restart: "no"
+    networks:
+      - data_pipeline_network
+
 networks:
   # Just for the airflow services to communicate with each other.
   airflow_backend:
@@ -368,3 +397,4 @@ networks:
 volumes:
   postgres-db-volume:
   minio_data:
+  ollama_models:

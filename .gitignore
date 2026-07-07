@@ -26,6 +26,9 @@ papers_data/
 minio_data/
 papers_data/
 
+# Ollama Models
+ollama_models/
+
 # Secrets and Environment Variables
 .env
 
