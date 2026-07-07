@@ -67,7 +67,6 @@ docker-compose up -d
 **4. Access the services**
 - Airflow UI: http://localhost:8080
 - MinIO Console: http://localhost:9001
-- PostgreSQL Adminer: http://localhost:80
 
 **5. Configure Airflow Connections**
 - Connection 1: `MinIO`
