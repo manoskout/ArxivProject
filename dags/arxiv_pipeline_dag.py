@@ -15,6 +15,7 @@ from __future__ import annotations
 from airflow import DAG
 import pendulum
 from airflow.decorators import dag, task
+from airflow.utils.trigger_rule import TriggerRule
 from src.fetch_papers import data_fetcher
 from src.minio_functions import validate_bucket
 from psycopg2.extras import execute_values
@@ -180,18 +181,37 @@ with DAG(
         cursor.close()
         conn.close()
 
-    
-    # @task(trigger_rule="all_done")
-    # def log_pipeline_run():
-    #     # Log the run of the pipeline for monitoring and auditing purposes
-    #     pass
+        # TODO: It stores only the successful insert count, but we should also log the total fetched count for completeness.
+    @task(trigger_rule=TriggerRule.ALL_DONE)
+    def log_ingestion_success(**context):
+        hook = PostgresHook(postgres_conn_id="papers_db")
+
+        run_date = context['ds']
+        started_at = context['dag_run'].start_date
+
+        fetched_cnt = hook.get_first("SELECT COUNT(*) FROM staging_papers;")[0]
+        new_cnt = hook.get_first(
+            "SELECT COUNT(*) FROM papers WHERE DATE(ingested_at) = CURRENT_DATE;")[0]
+
+
+        insert_sql = """
+            INSERT INTO ingestion_runs (
+                run_date, category_code, papers_fetched, papers_new, 
+                status, error_message, started_at, finished_at
+            ) VALUES (%s, %s, %s, %s, %s, NULL, %s, CURRENT_TIMESTAMP);
+        """
+
+        hook.run(insert_sql, parameters=(
+            run_date, 'arxiv_batch', fetched_cnt, new_cnt, 'success', started_at
+        ))
+        print(f"Logged Success: {new_cnt} new papers.")
 
     raw = fetch_papers()
     save_raw_to_minio(raw)
     clean = clean_and_normalize()
-    load_to_stage = staging_insert(clean)   
-    # log_run = log_pipeline_run()
+    load_to_stage = staging_insert(clean) 
+    logging = log_ingestion_success()  
 
 
-    create_staging >> raw >> clean >> load_to_stage >> distribute_data # >> log_run
+    create_staging >> raw >> clean >> load_to_stage >> distribute_data >> logging
   
