@@ -18,7 +18,7 @@ This project is built using an ELT architecture, prioritizing data preservation.
 4. **Distribution:** A transactional PL/pgSQL script distributes the staging data across normalized tables.
 5. **Logging:** An Airflow-native task records execution metrics (run status, papers fetched, new papers inserted) into an `ingestion_runs` table.
 
-## 🗄️ Database Schema
+## Database Schema
 
 The PostgreSQL database separates entities to support efficient querying and future ML enrichments.
 
@@ -35,7 +35,7 @@ The PostgreSQL database separates entities to support efficient querying and fut
 * **Operational:**
   * `ingestion_runs`: Logs pipeline metadata and execution statistics.
 
-## 🛠️ Prerequisites
+## Prerequisites
 
 Before running this project, ensure you have the following installed on your machine:
 * [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine
