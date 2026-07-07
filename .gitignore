@@ -1,0 +1,34 @@
+# Python Virtual Environments
+.venv/
+venv/
+env/
+
+# Python Cache & Compiled Files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebook
+arxiv_requests/
+.ipynb_checkpoints/
+
+# Airflow & Logs
+config/
+logs/
+
+# Data Lake / MinIO Data
+minio_data/
+papers_data/
+
+
+# Local Storage & Database Volumes
+# (You should never commit raw data or datalakes to Git)
+minio_data/
+papers_data/
+
+# Secrets and Environment Variables
+.env
+
+# MacOS/Windows System Files (Optional but recommended)
+.DS_Store
+Thumbs.db
