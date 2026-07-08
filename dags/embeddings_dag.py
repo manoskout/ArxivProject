@@ -74,6 +74,7 @@ with DAG(
         if not papers:
             print("No papers to fetch embeddings for.")
             return
+        data = []
         for paper in papers:
             print(paper)
             paper_id, title, abstract, authors = paper
@@ -85,10 +86,27 @@ with DAG(
                 model="embeddinggemma"
             )
             print(response.data[0].embedding)
-
+            data.append((paper_id, response.data[0].embedding, "embeddinggemma"))
         print(f"Embeddings fetched for {len(papers)} papers.")
         # pass
+
+        hook = PostgresHook(postgres_conn_id="papers_db")
+        conn = hook.get_conn()
+        cursor = conn.cursor()
+
+        insert_query = """
+            INSERT INTO paper_embeddings (paper_id, embedding, model_used)
+            VALUES %s
+            ON CONFLICT (paper_id) DO UPDATE SET
+                embedding = EXCLUDED.embedding,
+                model_used = EXCLUDED.model_used,
+                created_at = CURRENT_TIMESTAMP;
+        """
+        execute_values(cursor, insert_query, data)
+        conn.commit()
+        cursor.close()
+        conn.close()
+
     embeddings = get_embeddings(get_papers_task.output)
-    
 
     get_papers_task >> embeddings
