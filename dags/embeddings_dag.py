@@ -15,8 +15,12 @@ import json
 import pandas as pd
 import requests
 import time
-import openapi
+from openai import OpenAI
 
+client = OpenAI(
+    base_url="http://ollama:11434/v1",  
+    api_key="ollama",                     
+)
 
 
 with DAG(
@@ -34,19 +38,57 @@ with DAG(
 ) as dag:
 
     get_papers_task = SQLExecuteQueryOperator(
-        task_id='get_papers_to_download',
+        task_id='get_non_embedded_papers',
         conn_id='papers_db',
         sql="""
-            SELECT id, title, abstract
-            FROM papers
-            WHERE pdf_object_path IS NULL;  -- Only fetch papers that haven't been downloaded yet
+            WITH ListedAuthors AS (
+                SELECT 
+                    pa.paper_id,
+                    STRING_AGG(a.name, ', ') AS authors
+                FROM 
+                    paper_authors pa
+                INNER JOIN 
+                    authors a ON pa.author_id = a.id
+                GROUP BY 
+                    pa.paper_id
+            )
+            SELECT 
+                p.id,
+                p.title,
+                p.abstract,
+                la.authors
+            FROM 
+                papers p
+            INNER JOIN 
+                ListedAuthors la ON p.id = la.paper_id
+            WHERE p.pdf_object_path IS NOT NULL;
         """,
         show_return_value_in_logs=True
     )
     
     @task
-    def get_embeddings(papers: list[dict]) -> list[dict]:
+    def get_embeddings(papers: list[tuple]):
         """
         Fetch embeddings for the given papers using OpenAI API.
         """
-        pass
+        if not papers:
+            print("No papers to fetch embeddings for.")
+            return
+        for paper in papers:
+            print(paper)
+            paper_id, title, abstract, authors = paper
+            
+            text = f"{title}\n{authors}\n{abstract}"
+            print(f"Fetching embeddings for -- {title} ...")
+            response = client.embeddings.create(
+                input=text,
+                model="embeddinggemma"
+            )
+            print(response.data[0].embedding)
+
+        print(f"Embeddings fetched for {len(papers)} papers.")
+        # pass
+    embeddings = get_embeddings(get_papers_task.output)
+    
+
+    get_papers_task >> embeddings
