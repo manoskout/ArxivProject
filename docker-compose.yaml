@@ -51,7 +51,7 @@ x-airflow-common:
     # WARNING: Use _PIP_ADDITIONAL_REQUIREMENTS option ONLY for a quick checks
     # for other purpose (development, test and especially production usage) build/extend Airflow image.
     # Since minio uses S3 API, we need to install the Amazon provider package to enable S3 support in Airflow.
-    _PIP_ADDITIONAL_REQUIREMENTS: 'apache-airflow-providers-amazon'
+    _PIP_ADDITIONAL_REQUIREMENTS: 'apache-airflow-providers-amazon openai'
     # The following lines can be used to set a custom config file, stored in the local config folder
     AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
 
@@ -380,7 +380,9 @@ services:
       - ./ollama_models:/root/.ollama
     environment:
       OLLAMA_HOST: http://ollama:11434
-    entrypoint: ['ollama', 'pull', 'gemma4:26b']
+    entrypoint: ['/bin/sh', '-c']
+    command: 
+      -ollama pull ${LLM_MODEL} && ollama pull ${EMBEDDING_MODEL} 
     restart: "no"
     networks:
       - data_pipeline_network
