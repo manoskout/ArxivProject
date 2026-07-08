@@ -68,7 +68,7 @@ CREATE TABLE paper_enrichments (
 -- Embeddings for semantic search (pgvector)
 CREATE TABLE paper_embeddings (
     paper_id    BIGINT PRIMARY KEY REFERENCES papers(id) ON DELETE CASCADE,
-    embedding   vector(1536),                      -- adjust dim to your model
+    embedding   vector(768),   -- gemma 768-dimensional float32 vector                   -- adjust dim to your model
     model_used  TEXT NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
