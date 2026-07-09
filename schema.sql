@@ -7,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE papers (
     id              BIGSERIAL PRIMARY KEY,
     arxiv_id        TEXT UNIQUE NOT NULL,      -- e.g. '2301.12345v1'
-    title           TEXT NOT NULL,             
+    title           TEXT UNIQUE NOT NULL,             
     abstract        TEXT NOT NULL,
     published_at    TIMESTAMPTZ NOT NULL,
     updated_at      TIMESTAMPTZ,
@@ -88,4 +88,12 @@ CREATE TABLE ingestion_runs (
     error_message   TEXT,
     started_at      TIMESTAMPTZ NOT NULL,
     finished_at     TIMESTAMPTZ
+);
+
+-- Quality checks table (for DAG testing)
+CREATE TABLE quality_checks (
+    id              BIGSERIAL PRIMARY KEY,
+    check_name      TEXT NOT NULL,
+    violations      INT NOT NULL DEFAULT 0,
+    run_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
