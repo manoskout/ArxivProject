@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: arxiv
+    schema: public            # where YOUR pipeline writes — critical line
+    tables:
+      - name: papers
+        loaded_at_field: ingested_at
+        freshness:
+          warn_after: {count: 36, period: hour}
+          error_after: {count: 72, period: hour}
+      - name: authors
+      - name: paper_authors
+      - name: categories
+      - name: paper_categories

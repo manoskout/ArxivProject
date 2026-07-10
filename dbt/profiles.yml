@@ -1,0 +1,12 @@
+arxiv_dbt:
+  target: docker
+  outputs:
+    docker:
+      type: postgres
+      host: papers_db
+      port: 5432
+      user: "{{ env_var('POSTGRES_USER') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      dbname: "{{ env_var('POSTGRES_DB') }}"
+      schema: analytics
+      threads: 4
