@@ -7,6 +7,7 @@ env/
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 
 # Jupyter Notebook
 arxiv_requests/
@@ -35,3 +36,9 @@ ollama_models/
 # MacOS/Windows System Files (Optional but recommended)
 .DS_Store
 Thumbs.db
+
+# dbt artifacts
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+.user.yml
