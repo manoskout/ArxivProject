@@ -1,0 +1,10 @@
+name: arxiv_analytics
+version: '1.0'
+profile: arxiv_dbt
+model-paths: ["models"]
+
+models:
+  arxiv_analytics:
+    +materialized: view
+  mart:
+    +materialized: table
