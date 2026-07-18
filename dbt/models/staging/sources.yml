@@ -13,3 +13,5 @@ sources:
       - name: paper_authors
       - name: categories
       - name: paper_categories
+      - name: paper_enrichments
+      - name: paper_embeddings
