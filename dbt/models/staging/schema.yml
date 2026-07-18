@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: stg_papers
+    columns:
+      - name: paper_id
+        tests: [unique, not_null]
+      - name: arxiv_id
+        tests: [unique, not_null]
+
+  - name: stg_authors
+    columns:
+      - name: author_id
+        tests: [unique, not_null]
+
+  - name: stg_paper_authors
+    columns:
+      - name: paper_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_papers')
+              field: paper_id
+      - name: author_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_authors')
+              field: author_id
+
+  - name: stg_categories
+    columns:
+      - name: category_id
+        tests: [unique, not_null]
