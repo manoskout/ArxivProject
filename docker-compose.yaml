@@ -388,6 +388,22 @@ services:
     networks:
       - data_pipeline_network
 
+  metabase:
+    image: metabase/metabase:v0.49.5
+    container_name: metabase
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: airflow
+      MB_DB_PORT: 5432
+      MB_DB_USER: airflow
+      MB_DB_PASS: airflow
+      MB_DB_HOST: postgres
+    ports:
+      - "3000:3000"
+    restart: always
+    networks:
+      - data_pipeline_network
+
 networks:
   # Just for the airflow services to communicate with each other.
   airflow_backend:
