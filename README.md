@@ -67,6 +67,9 @@ docker-compose up -d
 **4. Access the services**
 - Airflow UI: http://localhost:8080
 - MinIO Console: http://localhost:9001
+- Metabase BI: http://localhost:3000
+
+
 
 **5. Configure Airflow Connections**
 - Connection 1: `MinIO`
@@ -81,6 +84,14 @@ docker-compose up -d
     - Login: papers
     - Password: papers
     - Port: 5432
+  **6. Configure Metabase**
+  - Create database and user
+  `docker compose exec papers_db psql -U papers -d papers -c "CREATE USER metabase WITH PASSWORD 'metabase';" -c "CREATE DATABASE metabase_app OWNER metabase;"`  
+  - Verify that both landed
+  `docker compose exec papers_db psql -U papers -d papers -c "\l metabase_app"`
+  - Create a user for Metabase through the UI
+    - To get the IP, you should check the data_pipeline_network network
+    `docker compose exec metabase bash -c "getent hosts papers_db && timeout 3 bash -c '</dev/tcp/papers_db/5432' && echo REACHABLE"`
 
 ## Future Improvements
 1. Vector Search: Generate embeddings for paper abstracts and store them on `paper_embeddings` table
