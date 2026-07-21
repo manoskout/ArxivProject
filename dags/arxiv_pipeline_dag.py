@@ -206,11 +206,11 @@ with DAG(
         print(f"Logged Success: {new_cnt} new papers.")
 
     raw = fetch_papers()
-    save_raw_to_minio(raw)
+    minio_save = save_raw_to_minio(raw)
     clean = clean_and_normalize()
     load_to_stage = staging_insert(clean) 
     logging = log_ingestion_success()  
 
 
-    create_staging >> raw >> clean >> load_to_stage >> distribute_data >> logging
+    create_staging >> raw >> minio_save >> clean >> load_to_stage >> distribute_data >> logging
   
